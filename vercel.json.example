@@ -1,0 +1,43 @@
+{
+  "buildCommand": "pnpm run build",
+  "outputDirectory": ".next",
+  "devCommand": "pnpm run dev",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "env": {
+    "COZE_SUPABASE_URL": "https://your-project.supabase.co",
+    "COZE_SUPABASE_ANON_KEY": "your-anon-key-here"
+  },
+  "build": {
+    "env": {
+      "COZE_SUPABASE_URL": "https://your-project.supabase.co",
+      "COZE_SUPABASE_ANON_KEY": "your-anon-key-here"
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
