@@ -247,7 +247,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Articles</h2>
               <div className="grid md:grid-cols-3 gap-6">
                 {relatedPosts.map((relatedPost) => (
-                  <Link key={relatedPost.id} href={/blog/}>
+                  <Link key={relatedPost.id} href={`/blog/${relatedPost.slug}`}>
                     <Card className="border-0 shadow-sm hover:shadow-md transition-shadow h-full">
                       <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                         <Share2 className="h-8 w-8 text-gray-400" />
