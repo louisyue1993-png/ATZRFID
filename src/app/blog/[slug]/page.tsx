@@ -1,14 +1,82 @@
-import { Badge } from '@/components/ui/badge';
+﻿import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, User, ArrowLeft, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+async function getBlogPost(slug: string): Promise<BlogPost | null> {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching blog post:', error);
+    return null;
+  }
+
+  let content;
+  try {
+    content = typeof data.content === 'string'
+      ? JSON.parse(data.content)
+      : data.content;
+  } catch {
+    content = [];
+  }
+
+  let tags;
+  try {
+    tags = typeof data.tags === 'string'
+      ? JSON.parse(data.tags)
+      : data.tags;
+  } catch {
+    tags = [];
+  }
+
+  return {
+    id: data.id,
+    slug: data.slug,
+    title: data.title,
+    excerpt: data.excerpt,
+    category: data.category,
+    date: new Date(data.created_at).toLocaleDateString(),
+    readTime: data.read_time + ' min read',
+    author: data.author_name,
+    authorRole: data.author_role,
+    authorBio: data.author_bio,
+    tags: tags,
+    content: content,
+  };
+}
+
+async function getRelatedPosts(currentId: string): Promise<RelatedPost[]> {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('id, slug, title, excerpt, category')
+    .eq('status', 'published')
+    .neq('id', currentId)
+    .limit(3);
+
+  if (error || !data) {
+    console.error('Error fetching related posts:', error);
+    return [];
+  }
+
+  return data;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPost(slug);
 
   if (!post) {
     return {
@@ -17,7 +85,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   return {
-    title: `${post.title} | RFID Blog`,
+    title: ${post.title} | RFID Blog,
     description: post.excerpt,
     keywords: ['RFID', post.category, 'blog', post.title],
   };
@@ -25,7 +93,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPost(slug);
 
   if (!post) {
     return (
@@ -44,12 +112,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     );
   }
 
+  const relatedPosts = await getRelatedPosts(post.id);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1">
-        {/* Breadcrumb */}
         <div className="bg-gray-50 py-4">
           <div className="container mx-auto px-4">
             <nav className="flex items-center space-x-2 text-sm">
@@ -66,17 +135,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </div>
 
-        {/* Article */}
         <article className="py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              {/* Back Button */}
               <Link href="/blog" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Blog
               </Link>
 
-              {/* Header */}
               <div className="mb-8">
                 <Badge className="mb-4">{post.category}</Badge>
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
@@ -98,12 +164,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
               </div>
 
-              {/* Featured Image */}
               <div className="aspect-video bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg mb-8 flex items-center justify-center">
                 <Share2 className="h-20 w-20 text-blue-400" />
               </div>
 
-              {/* Content */}
               <div className="prose prose-lg max-w-none">
                 <p className="text-xl text-gray-600 mb-8">{post.excerpt}</p>
                 {post.content.map((section, index) => (
@@ -113,7 +177,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                         {section.heading}
                       </h2>
                     )}
-                    {section.paragraphs.map((paragraph, pIndex) => (
+                    {section.paragraphs && section.paragraphs.map((paragraph, pIndex) => (
                       <p key={pIndex} className="text-gray-700 mb-4">
                         {paragraph}
                       </p>
@@ -129,7 +193,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 ))}
               </div>
 
-              {/* Tags */}
               <div className="flex flex-wrap gap-2 mt-8 pt-8 border-t">
                 {post.tags.map((tag) => (
                   <Badge key={tag} variant="outline">
@@ -138,7 +201,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 ))}
               </div>
 
-              {/* Share */}
               <div className="mt-8 pt-8 border-t">
                 <p className="text-sm font-medium text-gray-900 mb-4">Share this article:</p>
                 <div className="flex gap-3">
@@ -157,7 +219,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
               </div>
 
-              {/* Author Bio */}
               <Card className="mt-8">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
@@ -180,14 +241,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </article>
 
-        {/* Related Posts */}
         <section className="py-12 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Articles</h2>
               <div className="grid md:grid-cols-3 gap-6">
-                {getRelatedPosts(post.id).map((relatedPost) => (
-                  <Link key={relatedPost.id} href={`/blog/${relatedPost.slug}`}>
+                {relatedPosts.map((relatedPost) => (
+                  <Link key={relatedPost.id} href={/blog/}>
                     <Card className="border-0 shadow-sm hover:shadow-md transition-shadow h-full">
                       <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                         <Share2 className="h-8 w-8 text-gray-400" />
@@ -215,89 +275,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   );
 }
 
-function getBlogPost(slug: string): BlogPost | null {
-  const posts: Record<string, BlogPost> = {
-    'future-of-rfid-technology-2025': {
-      id: 1,
-      slug: 'future-of-rfid-technology-2025',
-      title: 'The Future of RFID Technology: Trends to Watch in 2025',
-      excerpt: 'Explore the emerging trends and innovations that will shape the RFID industry in the coming years, from enhanced security to IoT integration.',
-      category: 'Technology',
-      date: 'January 15, 2025',
-      readTime: '8 min read',
-      author: 'Dr. Sarah Chen',
-      authorRole: 'Chief Technology Officer',
-      authorBio: 'Dr. Chen has over 15 years of experience in RFID technology and leads our R&D team in developing next-generation solutions.',
-      tags: ['RFID Trends', 'Technology', 'IoT', 'Innovation'],
-      content: [
-        {
-          heading: 'Introduction',
-          paragraphs: [
-            'Radio Frequency Identification (RFID) technology continues to evolve at a rapid pace, driven by advancements in chip design, antenna technology, and IoT integration. As we move into 2025, several key trends are emerging that will shape the future of RFID across industries.',
-            'This article explores the most significant developments in RFID technology and their potential impact on businesses worldwide.',
-          ],
-        },
-        {
-          heading: 'Enhanced Security Features',
-          paragraphs: [
-            'Security remains a top priority for RFID applications, particularly in access control and payment systems. New encryption standards and authentication protocols are being developed to protect against cloning and unauthorized access.',
-            'The latest RFID chips now feature advanced cryptographic capabilities, including dynamic key exchange and challenge-response authentication, making them significantly more secure than previous generations.',
-          ],
-        },
-        {
-          heading: 'IoT Integration',
-          paragraphs: [
-            'RFID is increasingly being integrated with the Internet of Things (IoT) ecosystem, enabling real-time tracking and data analytics across entire supply chains. Smart RFID tags with built-in sensors can monitor temperature, humidity, and other environmental factors.',
-          ],
-        },
-        {
-          heading: 'Key Trends to Watch',
-          paragraphs: [],
-          list: [
-            'AI-powered data analytics for RFID systems',
-            'Smaller and more energy-efficient tags',
-            'Enhanced read range and accuracy',
-            'Lower production costs enabling widespread adoption',
-            'Integration with blockchain for secure supply chain tracking',
-          ],
-        },
-      ],
-    },
-  };
-
-  return posts[slug] || null;
-}
-
-function getRelatedPosts(currentId: number): RelatedPost[] {
-  const allPosts = [
-    {
-      id: 2,
-      slug: 'rfid-vs-barcodes-comparison',
-      title: 'RFID vs Barcodes: A Comprehensive Comparison',
-      excerpt: 'Understanding the key differences between RFID and barcode technologies.',
-      category: 'Technology',
-    },
-    {
-      id: 3,
-      slug: 'rfid-in-retail-inventory-management',
-      title: 'How RFID is Revolutionizing Retail Inventory Management',
-      excerpt: 'Discover how retailers leverage RFID to improve inventory accuracy.',
-      category: 'Applications',
-    },
-    {
-      id: 4,
-      slug: 'choosing-right-rfid-tags',
-      title: 'Choosing the Right RFID Tags for Your Application',
-      excerpt: 'A comprehensive guide to selecting appropriate RFID tags.',
-      category: 'Applications',
-    },
-  ];
-
-  return allPosts.filter((post) => post.id !== currentId).slice(0, 3);
-}
-
 type BlogPost = {
-  id: number;
+  id: string;
   slug: string;
   title: string;
   excerpt: string;
@@ -310,13 +289,13 @@ type BlogPost = {
   tags: string[];
   content: Array<{
     heading?: string;
-    paragraphs: string[];
+    paragraphs?: string[];
     list?: string[];
   }>;
 };
 
 type RelatedPost = {
-  id: number;
+  id: string;
   slug: string;
   title: string;
   excerpt: string;
