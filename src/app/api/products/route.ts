@@ -58,6 +58,7 @@ function buildStaticProducts(id: string | null, category: string | null, subCate
 
 // GET /api/products - Get all products with optional filters
 export async function GET(request: NextRequest) {
+  const isDebugEnabled = process.env.NODE_ENV !== 'production';
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');  // Support single product lookup by ID
@@ -211,6 +212,7 @@ export async function GET(request: NextRequest) {
     }
 
     const mergedProducts: Array<Record<string, any>> = [...formattedProducts];
+    let dedupeHits = 0;
     for (const item of fallbackProducts) {
       const keys = productDedupeKeys(item as Record<string, any>);
       const isDuplicate = keys.some(key => seenKeys.has(key));
@@ -220,16 +222,33 @@ export async function GET(request: NextRequest) {
         for (const key of keys) {
           seenKeys.add(key);
         }
+      } else {
+        dedupeHits += 1;
       }
     }
 
     const pagedProducts = mergedProducts.slice(offset, offset + limit);
 
-    return NextResponse.json({
+    const responseBody: Record<string, any> = {
       success: true,
       products: pagedProducts,
       count: pagedProducts.length,
-    });
+    };
+
+    if (isDebugEnabled) {
+      responseBody.debug = {
+        dedupe: {
+          enabled: true,
+          dbRows: formattedProducts.length,
+          staticRows: fallbackProducts.length,
+          dedupeHits,
+          mergedRows: mergedProducts.length,
+          returnedRows: pagedProducts.length,
+        },
+      };
+    }
+
+    return NextResponse.json(responseBody);
   } catch (error: any) {
     console.error('[API Products] Unexpected error, fallback to static products:', error);
 
@@ -242,11 +261,26 @@ export async function GET(request: NextRequest) {
 
     const fallbackProducts = buildStaticProducts(id, category, subCategory).slice(offset, offset + limit);
 
-    return NextResponse.json({
+    const responseBody: Record<string, any> = {
       success: true,
       products: fallbackProducts,
       count: fallbackProducts.length,
       fallback: true,
-    });
+    };
+
+    if (isDebugEnabled) {
+      responseBody.debug = {
+        dedupe: {
+          enabled: true,
+          dbRows: 0,
+          staticRows: fallbackProducts.length,
+          dedupeHits: 0,
+          mergedRows: fallbackProducts.length,
+          returnedRows: fallbackProducts.length,
+        },
+      };
+    }
+
+    return NextResponse.json(responseBody);
   }
 }

@@ -68,6 +68,7 @@ function blogDedupeKeys(post: Record<string, any>): string[] {
 
 // GET /api/blog - Get published blog posts
 export async function GET(request: NextRequest) {
+  const isDebugEnabled = process.env.NODE_ENV !== 'production';
   try {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '12');
@@ -158,6 +159,7 @@ export async function GET(request: NextRequest) {
       }
     }
     const mergedPosts = [...transformedPosts];
+    let dedupeHits = 0;
 
     for (const post of fallbackPosts) {
       const keys = blogDedupeKeys(post);
@@ -168,16 +170,33 @@ export async function GET(request: NextRequest) {
         for (const key of keys) {
           seenSlugs.add(key);
         }
+      } else {
+        dedupeHits += 1;
       }
     }
 
     const pagedPosts = mergedPosts.slice(offset, offset + limit);
 
-    return NextResponse.json({
+    const responseBody: Record<string, any> = {
       success: true,
       posts: pagedPosts,
       count: pagedPosts.length,
-    });
+    };
+
+    if (isDebugEnabled) {
+      responseBody.debug = {
+        dedupe: {
+          enabled: true,
+          dbRows: transformedPosts.length,
+          staticRows: fallbackPosts.length,
+          dedupeHits,
+          mergedRows: mergedPosts.length,
+          returnedRows: pagedPosts.length,
+        },
+      };
+    }
+
+    return NextResponse.json(responseBody);
   } catch (error: any) {
     console.error('[Public Blog API] Error:', error);
     return NextResponse.json(
