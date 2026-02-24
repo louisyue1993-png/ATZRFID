@@ -16,6 +16,34 @@ function formatPrice(value: unknown): string {
   return text.startsWith('$') ? text : `$${text}`;
 }
 
+function normalizeText(value: unknown): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function slugify(value: unknown): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function productDedupeKeys(product: Record<string, any>): string[] {
+  const keys: string[] = [];
+  const nameKey = normalizeText(product.name);
+  const slugFromName = slugify(product.name || product.title);
+  const slugFromId = slugify(product.id);
+
+  if (nameKey) keys.push(`name:${nameKey}`);
+  if (slugFromName) keys.push(`slug:${slugFromName}`);
+  if (slugFromId) keys.push(`slug:${slugFromId}`);
+
+  return keys;
+}
+
 function buildStaticProducts(id: string | null, category: string | null, subCategory: string | null) {
   return staticProducts
     .filter(p => !id || p.id === id)
@@ -175,15 +203,23 @@ export async function GET(request: NextRequest) {
 
     const fallbackProducts = buildStaticProducts(id, normalizedCategory, normalizedSubCategory);
 
-    const seenKeys = new Set(
-      formattedProducts.map(item => `${String(item.id)}::${String(item.name).toLowerCase()}`)
-    );
+    const seenKeys = new Set<string>();
+    for (const item of formattedProducts) {
+      for (const key of productDedupeKeys(item)) {
+        seenKeys.add(key);
+      }
+    }
 
     const mergedProducts: Array<Record<string, any>> = [...formattedProducts];
     for (const item of fallbackProducts) {
-      const key = `${String(item.id)}::${String(item.name).toLowerCase()}`;
-      if (!seenKeys.has(key)) {
+      const keys = productDedupeKeys(item as Record<string, any>);
+      const isDuplicate = keys.some(key => seenKeys.has(key));
+
+      if (!isDuplicate) {
         mergedProducts.push(item);
+        for (const key of keys) {
+          seenKeys.add(key);
+        }
       }
     }
 

@@ -38,6 +38,34 @@ function isPostPublished(post: Record<string, any>): boolean {
   return false;
 }
 
+function normalizeText(value: unknown): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function slugify(value: unknown): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function blogDedupeKeys(post: Record<string, any>): string[] {
+  const keys: string[] = [];
+  const explicitSlug = slugify(post.slug);
+  const titleSlug = slugify(post.title);
+  const titleKey = normalizeText(post.title);
+
+  if (explicitSlug) keys.push(`slug:${explicitSlug}`);
+  if (titleSlug) keys.push(`slug:${titleSlug}`);
+  if (titleKey) keys.push(`title:${titleKey}`);
+
+  return keys;
+}
+
 // GET /api/blog - Get published blog posts
 export async function GET(request: NextRequest) {
   try {
@@ -123,12 +151,23 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(post.date).toISOString(),
       }));
 
-    const seenSlugs = new Set(transformedPosts.map(post => post.slug));
+    const seenSlugs = new Set<string>();
+    for (const post of transformedPosts) {
+      for (const key of blogDedupeKeys(post)) {
+        seenSlugs.add(key);
+      }
+    }
     const mergedPosts = [...transformedPosts];
 
     for (const post of fallbackPosts) {
-      if (!seenSlugs.has(post.slug)) {
+      const keys = blogDedupeKeys(post);
+      const isDuplicate = keys.some(key => seenSlugs.has(key));
+
+      if (!isDuplicate) {
         mergedPosts.push(post);
+        for (const key of keys) {
+          seenSlugs.add(key);
+        }
       }
     }
 
