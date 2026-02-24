@@ -1,5 +1,7 @@
 # 博客表修复 - 立即执行
 
+> 📦 归档说明：该文档是历史应急入口，已不作为默认流程。请改用 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## ✅ 已修复
 
 所有SQL脚本中的语法错误已修复！

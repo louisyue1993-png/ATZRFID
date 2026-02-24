@@ -21,7 +21,6 @@ export default function AdminProductNewPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    id: '',
     name: '',
     description: '',
     fullDescription: '',
@@ -49,9 +48,6 @@ export default function AdminProductNewPage() {
 
     try {
       // Validate required fields
-      if (!formData.id.trim()) {
-        throw new Error('Product ID is required');
-      }
       if (!formData.name.trim()) {
         throw new Error('Product name is required');
       }
@@ -68,7 +64,6 @@ export default function AdminProductNewPage() {
       // Prepare data for API
       const apiData = {
         ...formData,
-        id: formData.id.trim(),
         name: formData.name.trim(),
         title: formData.name.trim(),
         description: formData.description || formData.fullDescription || '',
@@ -137,17 +132,6 @@ export default function AdminProductNewPage() {
           <CardContent className="space-y-6">
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="id">Product ID *</Label>
-                <Input
-                  id="id"
-                  placeholder="e.g., uhf-001"
-                  value={formData.id}
-                  onChange={(e) => handleInputChange('id', e.target.value)}
-                  required
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name *</Label>
                 <Input

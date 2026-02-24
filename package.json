@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "check:file-size": "node ./scripts/check-file-size.js --max-mb=20",
     "build": "bash ./scripts/build.sh",
     "dev": "bash ./scripts/dev.sh",
+    "prebuild": "pnpm run check:file-size",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
     "start": "bash ./scripts/start.sh",

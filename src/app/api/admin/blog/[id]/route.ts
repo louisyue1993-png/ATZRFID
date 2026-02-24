@@ -1,7 +1,18 @@
 // Single Blog Post Management API
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest, getSessionFromCookies } from '@/lib/admin-auth';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
+import { revalidateTag } from 'next/cache';
+
+function toReadTimeText(value: unknown): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? `${numeric} min read` : '5 min read';
+}
+
+function looksLikeMissingColumnError(error: any): boolean {
+  const message = String(error?.message || '');
+  return error?.code === '42703' || /column .* does not exist/i.test(message);
+}
 
 // PUT /api/admin/blog/[id] - Update blog post
 export async function PUT(
@@ -21,44 +32,64 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    const readTime = toReadTimeText(body.read_time);
+    const tags = Array.isArray(body.tags) ? body.tags : [];
 
     // Prepare update data
     const updateData: any = {
       title: body.title,
+      slug: body.slug,
       content: body.content,
       excerpt: body.excerpt || '',
       category: body.category || 'RFID',
       author: body.author || 'Admin',
       image: body.featured_image || '',
-      featured_image: body.featured_image || '',
-      tags: Array.isArray(body.tags) ? body.tags : [],
+      tags,
       language: body.language || 'en',
-      meta_title: body.meta_title || body.title,
-      meta_description: body.meta_description || body.excerpt || '',
-      read_time: body.read_time || 5,
+      read_time: readTime,
+      seo_keywords: tags,
       updated_at: new Date().toISOString(),
     };
 
     // Handle published status
     if (body.published !== undefined) {
       updateData.published = body.published;
-      if (body.published && !body.published_at) {
-        updateData.published_at = new Date().toISOString();
-      }
     }
 
-    // Handle slug change
-    if (body.slug) {
-      updateData.slug = body.slug;
-    }
-
-    const client = getSupabaseClient();
-    const { data, error } = await client
+    const client = getSupabaseAdminClient();
+    let { data, error } = await client
       .from('blog_posts')
       .update(updateData)
-      .eq('id', parseInt(id))
+      .eq('id', id)
       .select()
       .single();
+
+    if (error && looksLikeMissingColumnError(error)) {
+      const legacyUpdateData: any = {
+        title: body.title,
+        slug: body.slug,
+        content: body.content,
+        excerpt: body.excerpt || '',
+        category: body.category || 'RFID',
+        author: body.author || 'Admin',
+        featuredImage: body.featured_image || '',
+        tags,
+        readTime,
+        seoKeywords: tags,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (body.published !== undefined) {
+        legacyUpdateData.isPublished = body.published;
+      }
+
+      ({ data, error } = await client
+        .from('blog_posts')
+        .update(legacyUpdateData)
+        .eq('id', id)
+        .select()
+        .single());
+    }
 
     if (error) {
       // Check if slug already exists
@@ -76,6 +107,8 @@ export async function PUT(
       }
       throw error;
     }
+
+    revalidateTag('blog-posts', 'max');
 
     return NextResponse.json({
       success: true,
@@ -109,11 +142,11 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const client = getSupabaseClient();
+    const client = getSupabaseAdminClient();
     const { error } = await client
       .from('blog_posts')
       .delete()
-      .eq('id', parseInt(id));
+      .eq('id', id);
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -124,6 +157,8 @@ export async function DELETE(
       }
       throw error;
     }
+
+    revalidateTag('blog-posts', 'max');
 
     return NextResponse.json({
       success: true,

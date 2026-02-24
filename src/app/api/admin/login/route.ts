@@ -3,6 +3,13 @@ import { verifyAdminPassword, createSession } from '@/lib/admin-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD?.trim()) {
+      return NextResponse.json(
+        { error: 'ADMIN_PASSWORD is not configured' },
+        { status: 500 }
+      );
+    }
+
     const { password } = await request.json();
 
     // Debug logging

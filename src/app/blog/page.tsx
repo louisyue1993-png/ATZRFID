@@ -15,7 +15,6 @@ interface BlogPost {
   slug: string;
   title: string;
   excerpt: string;
-  content: string;
   category: string;
   author: string;
   readTime: string;
@@ -38,20 +37,15 @@ export default function BlogPage() {
     async function fetchBlogPosts() {
       try {
         setIsLoading(true);
-        console.log('[BlogPage] Fetching blog posts...');
-        const response = await fetch('/api/blog?limit=50');
+        const response = await fetch('/api/blog?limit=12');
         const data = await response.json();
-
-        console.log('[BlogPage] API response:', data);
 
         if (data.success && data.posts) {
           setPosts(data.posts);
         } else {
-          console.error('[BlogPage] API returned no posts:', data);
           setPosts([]);
         }
       } catch (err) {
-        console.error('[BlogPage] Error fetching blog posts:', err);
         setError('Failed to load blog posts');
       } finally {
         setIsLoading(false);

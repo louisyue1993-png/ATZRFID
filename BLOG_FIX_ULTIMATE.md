@@ -1,5 +1,7 @@
 # 博客表结构严重问题 - 终极解决方案
 
+> 📦 归档说明：该文档为历史应急方案。当前标准流程请参考 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## 🔴 严重问题
 
 `blog_posts` 表缺少多个**核心**列：

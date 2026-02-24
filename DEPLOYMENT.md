@@ -1,5 +1,7 @@
 # 部署环境变量配置指南
 
+> ⚠️ 本文档已降级为补充说明，标准部署请以 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md) 为准。
+
 > 📘 **详细配置指南**：查看 [ENV_CONFIG_GUIDE.md](./ENV_CONFIG_GUIDE.md) 获取各平台的详细配置说明
 > ⚡ **快速参考**：查看 [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) 获取快速配置卡片
 > 🧪 **测试验证**：查看 [TESTING_GUIDE.md](./TESTING_GUIDE.md) 获取完整的测试方法
@@ -47,7 +49,9 @@ ADMIN_PASSWORD=your-secure-password
 
 ### 2. 数据库数据初始化
 
-部署后，需要确保数据库中有初始数据。运行以下SQL脚本：
+部署后，需要确保数据库中有初始数据。推荐先运行 `blog-table-quick-fix.sql`，再运行 `blog-init-fixed.sql`。
+
+也可以直接执行以下示例 SQL 插入博客数据：
 
 ```sql
 -- 插入示例博客文章

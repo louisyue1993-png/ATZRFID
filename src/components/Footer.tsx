@@ -1,8 +1,14 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { productCategories } from '@/data/productCategories';
+import { getLocaleTexts, getRequestLocale, withLocalePath } from '@/lib/i18n';
 
-export default function Footer() {
+export default async function Footer() {
+  const locale = getRequestLocale((await headers()).get('x-locale'));
+  const t = getLocaleTexts(locale).nav;
+  const toLocalizedPath = (href: string) => withLocalePath(href, locale);
+
   return (
     <footer className="bg-gradient-to-b from-slate-900 to-slate-950 text-slate-300">
       <div className="container mx-auto px-4 py-16">
@@ -52,30 +58,30 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="mb-4 text-lg font-bold text-white">Quick Links</h3>
+            <h3 className="mb-4 text-lg font-bold text-white">{t.quickLinks}</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/" className="hover:text-blue-400 transition-colors flex items-center gap-2">
+                <Link href={toLocalizedPath('/')} className="hover:text-blue-400 transition-colors flex items-center gap-2">
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  Home
+                  {t.home}
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-blue-400 transition-colors flex items-center gap-2">
+                <Link href={toLocalizedPath('/about')} className="hover:text-blue-400 transition-colors flex items-center gap-2">
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  About Us
+                  {t.about}
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="hover:text-blue-400 transition-colors flex items-center gap-2">
+                <Link href={toLocalizedPath('/blog')} className="hover:text-blue-400 transition-colors flex items-center gap-2">
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  Blog
+                  {t.blog}
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-blue-400 transition-colors flex items-center gap-2">
+                <Link href={toLocalizedPath('/contact')} className="hover:text-blue-400 transition-colors flex items-center gap-2">
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  Contact
+                  {t.contact}
                 </Link>
               </li>
             </ul>
@@ -86,15 +92,15 @@ export default function Footer() {
             <h3 className="mb-4 text-lg font-bold text-white">Products</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/products" className="hover:text-blue-400 transition-colors flex items-center gap-2">
+                <Link href={toLocalizedPath('/products')} className="hover:text-blue-400 transition-colors flex items-center gap-2">
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  All Products
+                  {t.allProducts}
                 </Link>
               </li>
               {productCategories.slice(0, 5).map((category) => (
                 <li key={category.id}>
                   <Link
-                    href={`/products?category=${category.id}`}
+                    href={toLocalizedPath(`/products?category=${category.id}`)}
                     className="hover:text-blue-400 transition-colors flex items-center gap-2"
                   >
                     <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
@@ -107,7 +113,7 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h3 className="mb-4 text-lg font-bold text-white">Contact Us</h3>
+            <h3 className="mb-4 text-lg font-bold text-white">{t.contactUs}</h3>
             <ul className="space-y-4 text-sm">
               <li className="flex items-start space-x-3">
                 <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -161,22 +167,22 @@ export default function Footer() {
             </p>
             <div className="flex space-x-6 text-sm">
               <Link
-                href="/privacy"
+                href={toLocalizedPath('/privacy')}
                 className="text-slate-400 hover:text-blue-400 transition-colors"
               >
-                Privacy Policy
+                {t.privacy}
               </Link>
               <Link
-                href="/terms"
+                href={toLocalizedPath('/terms')}
                 className="text-slate-400 hover:text-blue-400 transition-colors"
               >
-                Terms of Service
+                {t.terms}
               </Link>
               <Link
-                href="/shipping"
+                href={toLocalizedPath('/shipping')}
                 className="text-slate-400 hover:text-blue-400 transition-colors"
               >
-                Shipping Policy
+                {t.shipping}
               </Link>
             </div>
           </div>

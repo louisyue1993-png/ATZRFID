@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { normalizeCategory, normalizeSubCategory, subCategoryMapping } from '@/lib/categoryMapping';
 
+function formatPrice(value: unknown): string {
+  if (value === null || value === undefined || value === '') {
+    return 'Contact for pricing';
+  }
+
+  const text = String(value).trim();
+  if (!text) {
+    return 'Contact for pricing';
+  }
+
+  return text.startsWith('$') ? text : `$${text}`;
+}
+
 // GET /api/products - Get all products with optional filters
 export async function GET(request: NextRequest) {
   try {
@@ -117,28 +130,28 @@ export async function GET(request: NextRequest) {
         name: p.name,
         title: p.title || p.name,
         description: p.description || '',
-        shortDescription: p.short_description || '',
-        fullDescription: p.full_description || '',
-        price: p.price ? `$${p.price}` : 'Contact for pricing',
-        priceRange: p.price_range || 'Contact for pricing',
+        shortDescription: p.short_description || p.shortDescription || '',
+        fullDescription: p.full_description || p.fullDescription || '',
+        price: formatPrice(p.price),
+        priceRange: p.price_range || p.priceRange || 'Contact for pricing',
         frequency: p.frequency || '',
         chip: p.chip || '',
         memory: p.memory || '',
-        readRange: p.read_range || '',
+        readRange: p.read_range || p.readRange || '',
         protocol: p.protocol || '',
         category: p.category || '',
-        subCategory: p.sub_category || '',
+        subCategory: p.sub_category || p.subCategory || '',
         badge: p.badge || '',
         moq: p.moq || '1',
-        deliveryTime: p.delivery_time || '3-5 business days',
+        deliveryTime: p.delivery_time || p.deliveryTime || '3-5 business days',
         specifications,
         features,
         applications,
         keywords,
         seoKeywords,
-        stockStatus: p.stock_status || 'InStock',
+        stockStatus: p.stock_status || p.stockStatus || 'InStock',
         rating: p.rating || 4.5,
-        reviewCount: p.review_count || 0,
+        reviewCount: p.review_count || p.reviewCount || 0,
         image: p.image || '',
         created_at: p.created_at,
         updated_at: p.updated_at,

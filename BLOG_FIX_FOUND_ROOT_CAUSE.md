@@ -1,5 +1,7 @@
 # 博客数据修复 - 已找到问题根源
 
+> 📦 归档说明：该问题定位文档仅保留参考。当前标准部署路径请看 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## 🔴 问题根源
 
 API 使用 `published` 列查询，但数据在 `ispublished` 列中！

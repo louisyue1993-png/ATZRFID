@@ -45,10 +45,10 @@ export default function AdminBlogEditPage() {
   const router = useRouter();
   const params = useParams();
   const postId = params.id as string;
+  const isNew = !postId || postId === 'new';
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isNew, setIsNew] = useState(!postId);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<BlogPost>({
@@ -71,12 +71,12 @@ export default function AdminBlogEditPage() {
   const [newTag, setNewTag] = useState('');
 
   useEffect(() => {
-    if (postId) {
+    if (!isNew) {
       fetchPost();
     } else {
       setIsLoading(false);
     }
-  }, [postId]);
+  }, [postId, isNew]);
 
   const fetchPost = async () => {
     try {

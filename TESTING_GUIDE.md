@@ -1,5 +1,7 @@
 # 部署验证测试指南
 
+> ⚠️ 若尚未完成部署，请先阅读 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 本文档提供详细的测试步骤，帮助你验证部署是否成功。
 
 ## 🧪 测试方法
@@ -260,7 +262,7 @@ SELECT COUNT(*) FROM products;
 SELECT COUNT(*) FROM blog_posts WHERE published = true;
 
 # 2. 初始化数据库
-# 运行 database-init.sql 文件
+# 依次运行 blog-table-quick-fix.sql 与 blog-init-fixed.sql
 
 # 3. 验证数据已插入
 SELECT id, name FROM products LIMIT 5;

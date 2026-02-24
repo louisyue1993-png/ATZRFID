@@ -1,5 +1,9 @@
 # 🚀 部署配置文档中心
 
+> ✅ 当前唯一执行入口： [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)
+>
+> 本页面保留导航能力，但若与总手册冲突，一律以总手册为准。
+
 欢迎来到ATZ RFID网站的部署配置中心！本中心提供完整的部署和环境变量配置指南。
 
 ## 📚 文档导航
@@ -41,7 +45,8 @@
 
 | 文件 | 用途 | 使用场景 |
 |------|------|---------|
-| **[database-init.sql](./database-init.sql)** | 数据库初始化脚本 | 首次部署或数据库为空时使用 |
+| **[blog-table-quick-fix.sql](./blog-table-quick-fix.sql)** | 修复/补齐 blog 表结构 | 历史库结构不一致时 |
+| **[blog-init-fixed.sql](./blog-init-fixed.sql)** | 插入博客示例数据 | 首次部署后初始化内容 |
 
 ## 🎯 快速开始（3步完成部署）
 
@@ -66,7 +71,7 @@ COZE_SUPABASE_ANON_KEY=your-anon-key-here
 
 ### Step 3: 初始化数据库
 
-在 Supabase SQL Editor 中运行 `database-init.sql` 文件，插入示例数据。
+在 Supabase SQL Editor 中依次运行：`blog-table-quick-fix.sql` → `blog-init-fixed.sql`。
 
 ## ✅ 验证部署
 
@@ -96,7 +101,7 @@ https://your-domain.com/admin/login
 
 **解决**：
 1. 检查环境变量是否正确配置
-2. 运行 `database-init.sql` 初始化数据
+2. 运行 `blog-table-quick-fix.sql` + `blog-init-fixed.sql` 初始化数据
 3. 重新部署应用
 
 **相关文档**：[DEPLOYMENT.md](./DEPLOYMENT.md)
@@ -183,7 +188,8 @@ https://your-domain.com/admin/login
 ### 数据库检查
 
 - [ ] 数据库表已创建
-- [ ] 已运行 `database-init.sql`
+- [ ] 已运行 `blog-table-quick-fix.sql`
+- [ ] 已运行 `blog-init-fixed.sql`
 - [ ] products 表有数据（至少10个）
 - [ ] blog_posts 表有数据（至少1篇）
 

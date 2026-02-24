@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest, getSessionFromCookies } from '@/lib/admin-auth';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
 
 // POST /api/admin/products/bulk - Batch operations on products
 export async function POST(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = getSupabaseClient();
+    const client = getSupabaseAdminClient();
 
     switch (action) {
       case 'delete':
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         // Batch publish
         const { data: publishedProducts, error: publishError } = await client
           .from('products')
-          .update({ stockStatus: 'InStock', updated_at: new Date().toISOString() })
+          .update({ stock_status: 'InStock', updated_at: new Date().toISOString() })
           .in('id', productIds)
           .select();
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         // Batch unpublish
         const { data: unpublishedProducts, error: unpublishError } = await client
           .from('products')
-          .update({ stockStatus: 'OutOfStock', updated_at: new Date().toISOString() })
+          .update({ stock_status: 'OutOfStock', updated_at: new Date().toISOString() })
           .in('id', productIds)
           .select();
 

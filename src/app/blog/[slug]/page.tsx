@@ -5,66 +5,142 @@ import { Calendar, Clock, User, ArrowLeft, Share2, Facebook, Twitter, Linkedin }
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
+import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const revalidate = 300;
+
+function parseReadTime(value: unknown): string {
+  if (typeof value === 'number') {
+    return `${value} min read`;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return value.includes('min') ? value : `${value} min read`;
+  }
+  return '5 min read';
+}
+
+function parseTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item));
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => String(item));
+      }
+    } catch {
+      return value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function parseContent(value: unknown): Array<{ heading?: string; paragraphs?: string[]; list?: string[] }> {
+  if (Array.isArray(value)) {
+    return value as Array<{ heading?: string; paragraphs?: string[]; list?: string[] }>;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed as Array<{ heading?: string; paragraphs?: string[]; list?: string[] }>;
+      }
+    } catch {
+      const paragraphs = value
+        .split('\n\n')
+        .map(item => item.trim())
+        .filter(Boolean);
+      return [{ paragraphs }];
+    }
+  }
+
+  return [];
+}
 
 async function getBlogPost(slug: string): Promise<BlogPost | null> {
-  const { data, error } = await supabase
+  const supabase = getSupabaseAdminClient();
+
+  let data: Record<string, any> | null = null;
+  let error: any = null;
+
+  const primary = await supabase
     .from('blog_posts')
-    .select('*')
+    .select('id, slug, title, excerpt, content, category, created_at, read_time, author, tags, published')
     .eq('slug', slug)
-    .eq('status', 'published')
+    .eq('published', true)
     .single();
+
+  data = primary.data as any;
+  error = primary.error;
+
+  if (error && (error.code === '42703' || /column .* does not exist/i.test(String(error.message || '')))) {
+    const fallback = await supabase
+      .from('blog_posts')
+      .select('id, slug, title, excerpt, content, category, created_at, readTime, author, tags, isPublished')
+      .eq('slug', slug)
+      .eq('isPublished', true)
+      .single();
+
+    data = fallback.data as any;
+    error = fallback.error;
+  }
 
   if (error || !data) {
     console.error('Error fetching blog post:', error);
     return null;
   }
 
-  let content;
-  try {
-    content = typeof data.content === 'string'
-      ? JSON.parse(data.content)
-      : data.content;
-  } catch {
-    content = [];
-  }
-
-  let tags;
-  try {
-    tags = typeof data.tags === 'string'
-      ? JSON.parse(data.tags)
-      : data.tags;
-  } catch {
-    tags = [];
-  }
-
   return {
-    id: data.id,
+    id: String(data.id),
     slug: data.slug,
     title: data.title,
-    excerpt: data.excerpt,
-    category: data.category,
+    excerpt: data.excerpt || '',
+    category: data.category || 'RFID',
     date: new Date(data.created_at).toLocaleDateString(),
-    readTime: data.read_time + ' min read',
-    author: data.author_name,
-    authorRole: data.author_role,
-    authorBio: data.author_bio,
-    tags: tags,
-    content: content,
+    readTime: parseReadTime(data.read_time || data.readTime),
+    author: data.author || 'ATZ Team',
+    authorRole: 'RFID Specialist',
+    authorBio: 'Focuses on RFID technology insights and real-world implementation best practices.',
+    tags: parseTags(data.tags),
+    content: parseContent(data.content),
   };
 }
 
 async function getRelatedPosts(currentId: string): Promise<RelatedPost[]> {
-  const { data, error } = await supabase
+  const supabase = getSupabaseAdminClient();
+
+  let data: RelatedPost[] | null = null;
+  let error: any = null;
+
+  const primary = await supabase
     .from('blog_posts')
     .select('id, slug, title, excerpt, category')
-    .eq('status', 'published')
+    .eq('published', true)
     .neq('id', currentId)
+    .order('created_at', { ascending: false })
     .limit(3);
+
+  data = primary.data as any;
+  error = primary.error;
+
+  if (error && (error.code === '42703' || /column .* does not exist/i.test(String(error.message || '')))) {
+    const fallback = await supabase
+      .from('blog_posts')
+      .select('id, slug, title, excerpt, category')
+      .eq('isPublished', true)
+      .neq('id', currentId)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    data = fallback.data as any;
+    error = fallback.error;
+  }
 
   if (error || !data) {
     console.error('Error fetching related posts:', error);
@@ -74,9 +150,23 @@ async function getRelatedPosts(currentId: string): Promise<RelatedPost[]> {
   return data;
 }
 
+const getCachedBlogPost = (slug: string) =>
+  unstable_cache(
+    async () => getBlogPost(slug),
+    ['blog-post', slug],
+    { revalidate: 300, tags: ['blog-posts', `blog-post-${slug}`] }
+  )();
+
+const getCachedRelatedPosts = (currentId: string) =>
+  unstable_cache(
+    async () => getRelatedPosts(currentId),
+    ['blog-related', currentId],
+    { revalidate: 300, tags: ['blog-posts', `blog-related-${currentId}`] }
+  )();
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await getBlogPost(slug);
+  const post = await getCachedBlogPost(slug);
 
   if (!post) {
     return {
@@ -93,7 +183,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await getBlogPost(slug);
+  const post = await getCachedBlogPost(slug);
 
   if (!post) {
     return (
@@ -112,7 +202,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     );
   }
 
-  const relatedPosts = await getRelatedPosts(post.id);
+  const relatedPosts = await getCachedRelatedPosts(post.id);
 
   return (
     <div className="min-h-screen flex flex-col">

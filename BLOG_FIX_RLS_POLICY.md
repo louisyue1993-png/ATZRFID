@@ -1,5 +1,7 @@
 # 修复 RLS 策略 - 允许匿名用户查询博客
 
+> 📦 归档说明：RLS 修复属于特定场景排障。常规部署请优先执行 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## 🔴 问题根源
 
 **RLS (Row Level Security) 策略阻止了 anon 角色的查询！**

@@ -1,14 +1,14 @@
 'use client';
 
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function AdminBlogNewPage() {
+  const router = useRouter();
+
   useEffect(() => {
-    // Generate a new ID and redirect to edit page
-    const newId = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9);
-    redirect(`/admin/blog/edit/${newId}`);
-  }, []);
+    router.replace('/admin/blog/edit/new');
+  }, [router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

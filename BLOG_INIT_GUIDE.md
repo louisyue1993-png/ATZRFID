@@ -1,5 +1,7 @@
 # 博客数据初始化指南
 
+> 📦 归档说明：此文档属于历史排障记录。当前请按 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md) 的初始化顺序执行。
+
 ## 🔧 问题说明
 
 在运行 `database-init.sql` 时遇到错误：

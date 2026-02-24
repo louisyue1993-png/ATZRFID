@@ -1,5 +1,7 @@
 # 后台管理系统部署指南
 
+> ⚠️ 部署总流程请先执行 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。本文重点是后台功能使用。
+
 ## 概述
 
 本系统包含完整的后台管理功能，允许管理员登录后台修改产品、博客等内容。修改后的内容会实时保存到 Supabase 数据库，并在前端页面显示。

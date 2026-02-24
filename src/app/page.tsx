@@ -75,7 +75,7 @@ function LocalBusinessJsonLd({ products = [] }: { products: any[] }) {
 
 export default async function Home() {
   // Fetch products from database
-  const products = await fetchProducts({ limit: 10 });
+  const products = await fetchProducts({ limit: 4 });
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -1,5 +1,7 @@
 # 部署检查清单
 
+> ✅ 本清单基于 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。执行前请先完成总手册步骤。
+
 使用此清单确保后台管理系统正确部署和配置。
 
 ## 阶段 1：环境配置
@@ -12,7 +14,8 @@
 
 ## 阶段 2：数据库初始化
 
-- [ ] 已在 Supabase SQL Editor 中运行 `scripts/init-database.sql`
+- [ ] 已在 Supabase SQL Editor 中运行 `blog-table-quick-fix.sql`
+- [ ] 已在 Supabase SQL Editor 中运行 `blog-init-fixed.sql`
 - [ ] 已验证 products 表创建成功
 - [ ] 已验证 blog_posts 表创建成功
 - [ ] 已验证索引创建成功

@@ -1,0 +1,53 @@
+name: Verify Vercel Production
+
+on:
+  deployment_status:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'deployment_status' &&
+        github.event.deployment_status.state == 'success' &&
+        (
+          github.event.deployment.environment == 'production' ||
+          github.event.deployment.environment == 'Production'
+        )
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve production URL
+        id: resolve_url
+        shell: bash
+        env:
+          PROD_URL_FROM_VARS: ${{ vars.PRODUCTION_URL }}
+          PROD_URL_FROM_SECRETS: ${{ secrets.PRODUCTION_URL }}
+          PROD_URL_FROM_DEPLOYMENT: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          URL="${PROD_URL_FROM_VARS}"
+          if [ -z "$URL" ]; then
+            URL="${PROD_URL_FROM_SECRETS}"
+          fi
+          if [ -z "$URL" ]; then
+            URL="${PROD_URL_FROM_DEPLOYMENT}"
+          fi
+
+          if [ -z "$URL" ]; then
+            echo "PRODUCTION_URL is not set. Configure repository variable or secret named PRODUCTION_URL." >&2
+            exit 1
+          fi
+
+          URL="${URL%/}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Using production URL: $URL"
+
+      - name: Run production verification script
+        shell: pwsh
+        run: |
+          ./scripts/verify-vercel-production.ps1 -Domain "${{ steps.resolve_url.outputs.url }}"

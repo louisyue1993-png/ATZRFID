@@ -1,5 +1,7 @@
 # 环境变量快速参考卡片
 
+> ⚠️ 若你是首次部署，请先读 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md) 再使用本卡片。
+
 ## ⚡ 快速配置步骤
 
 ### 第一步：获取 Supabase 凭据
@@ -120,7 +122,7 @@ https://your-domain.com/blog
 
 **原因**：数据库查询失败或表不存在
 
-**解决**：运行 `database-init.sql` 初始化数据库表
+**解决**：在 Supabase SQL Editor 依次运行 `blog-table-quick-fix.sql` 和 `blog-init-fixed.sql`
 
 ---
 

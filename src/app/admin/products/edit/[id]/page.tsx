@@ -86,17 +86,19 @@ export default function AdminProductEditPage() {
   useEffect(() => {
     async function fetchProduct() {
       try {
-        const response = await fetch(`/api/products?id=${productId}`);
+        const response = await fetch(`/api/admin/products?id=${productId}&limit=1`);
         const data = await response.json();
         
-        if (data.success && data.products && data.products.length > 0) {
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
           const product = data.products[0];
           setFormData({
             name: product.name || '',
             description: product.description || '',
             shortDescription: product.shortDescription || '',
             fullDescription: product.fullDescription || '',
-            price: product.price || '',
+            price: typeof product.price === 'string'
+              ? product.price.replace(/[^\d.]/g, '')
+              : '',
             priceRange: product.priceRange || '',
             category: product.category || '',
             subCategory: product.subCategory || '',

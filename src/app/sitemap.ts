@@ -1,77 +1,45 @@
 import { MetadataRoute } from 'next';
 import { products } from '@/data/products';
 import { productCategories } from '@/data/productCategories';
+import { supportedLocales, withLocalePath } from '@/lib/i18n';
+
+function withAllLocales(baseUrl: string, path: string) {
+  return supportedLocales.map(locale => `${baseUrl}${withLocalePath(path, locale)}`);
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://www.atzrfid.com';
 
   // Static pages
-  const staticPages = [
-    {
-      url: baseUrl,
+  const staticPaths = ['/', '/about', '/contact', '/products', '/blog', '/privacy', '/terms', '/shipping'];
+  const staticPages = staticPaths.flatMap(path =>
+    withAllLocales(baseUrl, path).map(url => ({
+      url,
       lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/products`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly' as const,
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly' as const,
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/shipping`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly' as const,
-      priority: 0.3,
-    },
-  ];
+      changeFrequency: path === '/' || path === '/products' ? ('daily' as const) : ('weekly' as const),
+      priority: path === '/' ? 1 : path === '/products' ? 0.9 : 0.7,
+    }))
+  );
 
   // Product category pages
-  const categoryPages = productCategories.map((category) => ({
-    url: `${baseUrl}/products?category=${category.id}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
-  }));
+  const categoryPages = productCategories.flatMap((category) =>
+    withAllLocales(baseUrl, `/products?category=${category.id}`).map(url => ({
+      url,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }))
+  );
 
   // Product detail pages
-  const productPages = products.map((product) => ({
-    url: `${baseUrl}/products/${product.id}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }));
+  const productPages = products.flatMap((product) =>
+    withAllLocales(baseUrl, `/products/${product.id}`).map(url => ({
+      url,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+  );
 
   return [...staticPages, ...categoryPages, ...productPages];
 }

@@ -1,5 +1,7 @@
 # 环境变量配置指南
 
+> ⚠️ 统一部署流程请先看 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。本文仅提供平台操作细节。
+
 本文档详细说明如何在各个主流部署平台中配置环境变量，确保你的RFID网站能够正确连接到Supabase数据库。
 
 ## 📋 必需的环境变量
@@ -451,7 +453,7 @@ curl https://your-domain.com/api/blog?limit=1
 检查项：
 - 环境变量是否配置
 - blog_posts表是否有数据
-- 运行database-init.sql初始化数据
+- 依次运行 blog-table-quick-fix.sql 和 blog-init-fixed.sql
 - 检查published字段是否为true
 ```
 
@@ -516,5 +518,6 @@ curl https://your-domain.com/api/blog?limit=1
 
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - 部署问题排查指南
 - [TESTING_GUIDE.md](./TESTING_GUIDE.md) - 部署验证测试指南
-- [database-init.sql](./database-init.sql) - 数据库初始化脚本
+- [blog-table-quick-fix.sql](./blog-table-quick-fix.sql) - blog 表结构修复脚本
+- [blog-init-fixed.sql](./blog-init-fixed.sql) - blog 示例数据初始化脚本
 - [Supabase Documentation](https://supabase.com/docs)

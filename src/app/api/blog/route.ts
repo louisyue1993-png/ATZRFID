@@ -1,15 +1,51 @@
 // Public Blog API - Fetch blog posts for the website
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
+
+function parseJsonArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item));
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => String(item));
+      }
+    } catch {
+      return value
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+function isPostPublished(post: Record<string, any>): boolean {
+  if (typeof post.published === 'boolean') {
+    return post.published;
+  }
+  if (typeof post.isPublished === 'boolean') {
+    return post.isPublished;
+  }
+  if (typeof post.ispublished === 'boolean') {
+    return post.ispublished;
+  }
+  return false;
+}
 
 // GET /api/blog - Get published blog posts
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '12');
     const offset = parseInt(searchParams.get('offset') || '0');
     const category = searchParams.get('category');
     const slug = searchParams.get('slug');
+    const includeContent = searchParams.get('includeContent') === 'true';
 
     console.log('[Public Blog API] Fetching blogs with params:', {
       limit,
@@ -18,12 +54,11 @@ export async function GET(request: NextRequest) {
       slug
     });
 
-    const client = getSupabaseClient();
+    const client = getSupabaseAdminClient();
 
     let query = client
       .from('blog_posts')
       .select('*')
-      .eq('published', true)
       .order('created_at', { ascending: false });
 
     // Filter by slug if provided
@@ -46,23 +81,26 @@ export async function GET(request: NextRequest) {
 
     console.log('[Public Blog API] Fetched blogs:', data?.length || 0);
 
-    // Transform data format
-    const transformedPosts = data.map(post => ({
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      excerpt: post.excerpt,
-      content: post.content,
-      category: post.category,
-      author: post.author,
-      readTime: post.read_time,
-      image: post.image,
-      published: post.published,
-      tags: typeof post.tags === 'string' ? JSON.parse(post.tags) : post.tags,
-      seoKeywords: typeof post.seo_keywords === 'string' ? JSON.parse(post.seo_keywords) : post.seo_keywords,
-      createdAt: post.created_at,
-      updatedAt: post.updated_at,
-    }));
+    // Transform data format and handle both snake_case and camelCase schemas
+    const transformedPosts = (data || [])
+      .filter(post => isPostPublished(post))
+      .filter(post => !category || String(post.category || '').toLowerCase() === category.toLowerCase())
+      .map(post => ({
+        id: String(post.id),
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt || '',
+        ...(includeContent ? { content: post.content || '' } : {}),
+        category: post.category || 'RFID',
+        author: post.author || 'ATZ Team',
+        readTime: post.read_time || post.readTime || '5 min read',
+        image: post.image || post.featured_image || post.featuredImage || '/blog/default-blog.jpg',
+        published: isPostPublished(post),
+        tags: parseJsonArray(post.tags),
+        seoKeywords: parseJsonArray(post.seo_keywords || post.seoKeywords),
+        createdAt: post.created_at || post.createdAt || new Date().toISOString(),
+        updatedAt: post.updated_at || post.updatedAt || post.created_at || new Date().toISOString(),
+      }));
 
     return NextResponse.json({
       success: true,

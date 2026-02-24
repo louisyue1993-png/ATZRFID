@@ -1,11 +1,14 @@
 // Admin Authentication Utilities
 import { NextRequest } from 'next/server';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() || 'admin123';
 const SESSION_COOKIE_NAME = 'admin_session';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_PASSWORD_CONFIGURED = Boolean(process.env.ADMIN_PASSWORD?.trim());
 
-console.log('[Admin Auth] Initialized with ADMIN_PASSWORD set:', !!process.env.ADMIN_PASSWORD);
-console.log('[Admin Auth] Using password length:', ADMIN_PASSWORD.length);
+if (IS_PRODUCTION && !IS_PASSWORD_CONFIGURED) {
+  console.error('[Admin Auth] ADMIN_PASSWORD is not configured in production. Login will be denied.');
+}
 
 export interface AdminSession {
   isAuthenticated: boolean;
@@ -13,6 +16,10 @@ export interface AdminSession {
 }
 
 export function verifyAdminPassword(password: string): boolean {
+  if (IS_PRODUCTION && !IS_PASSWORD_CONFIGURED) {
+    return false;
+  }
+
   const isValid = password === ADMIN_PASSWORD;
   console.log('[Admin Auth] verifyAdminPassword called, result:', isValid);
   return isValid;

@@ -1,7 +1,35 @@
 // Blog Management API
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest, getSessionFromCookies } from '@/lib/admin-auth';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
+import { revalidateTag } from 'next/cache';
+
+function parseTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item));
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => String(item));
+      }
+    } catch {
+      return value.split(',').map(item => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function toReadTimeText(value: unknown): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? `${numeric} min read` : '5 min read';
+}
+
+function looksLikeMissingColumnError(error: any): boolean {
+  const message = String(error?.message || '');
+  return error?.code === '42703' || /column .* does not exist/i.test(message);
+}
 
 // GET /api/admin/blog - Get all blog posts
 export async function GET(request: NextRequest) {
@@ -22,14 +50,14 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    const client = getSupabaseClient();
+    const client = getSupabaseAdminClient();
     let query = client
       .from('blog_posts')
       .select('*')
       .order('created_at', { ascending: false });
 
     // Filter by published status
-    if (published !== null) {
+    if (published === 'true' || published === 'false') {
       query = query.eq('published', published === 'true');
     }
 
@@ -49,29 +77,29 @@ export async function GET(request: NextRequest) {
 
     // Transform database format to frontend format
     const formattedPosts = posts.map(post => ({
-      id: post.id.toString(),
+      id: String(post.id),
       slug: post.slug,
       title: post.title,
       content: post.content,
       excerpt: post.excerpt || '',
       category: post.category || 'RFID',
       author: post.author || 'Admin',
-      featured_image: post.featured_image || post.image || '',
-      tags: Array.isArray(post.tags) ? post.tags : [],
-      published: post.published || false,
+      featured_image: post.featured_image || post.featuredImage || post.image || '',
+      tags: parseTags(post.tags),
+      published: typeof post.published === 'boolean' ? post.published : Boolean(post.isPublished),
       language: post.language || 'en',
-      meta_title: post.meta_title || post.title,
-      meta_description: post.meta_description || post.excerpt || '',
-      read_time: parseInt(post.read_time) || 5,
+      meta_title: post.meta_title || post.metaTitle || post.title,
+      meta_description: post.meta_description || post.metaDescription || post.excerpt || '',
+      read_time: parseInt(String(post.read_time || '').replace(/[^\d]/g, ''), 10) || 5,
       view_count: post.view_count || 0,
-      date: new Date(post.created_at).toLocaleDateString('en-US', {
+      date: new Date(post.created_at || post.createdAt || Date.now()).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
       }),
-      published_at: post.published_at,
-      created_at: post.created_at,
-      updated_at: post.updated_at,
+      published_at: post.published_at || post.publishedAt || null,
+      created_at: post.created_at || post.createdAt,
+      updated_at: post.updated_at || post.updatedAt,
     }));
 
     return NextResponse.json({
@@ -111,14 +139,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate ID
-    const id = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9);
+    const readTime = toReadTimeText(body.read_time);
+    const tags = Array.isArray(body.tags) ? body.tags : [];
 
-    const client = getSupabaseClient();
-    const { data, error } = await client
+    const client = getSupabaseAdminClient();
+    let { data, error } = await client
       .from('blog_posts')
       .insert([{
-        id: parseInt(id),
         slug: body.slug,
         title: body.title,
         content: body.content,
@@ -126,17 +153,34 @@ export async function POST(request: NextRequest) {
         category: body.category || 'RFID',
         author: body.author || 'Admin',
         image: body.featured_image || '',
-        featured_image: body.featured_image || '',
-        tags: Array.isArray(body.tags) ? body.tags : [],
+        tags,
         published: body.published || false,
         language: body.language || 'en',
-        meta_title: body.meta_title || body.title,
-        meta_description: body.meta_description || body.excerpt || '',
-        read_time: body.read_time || 5,
-        published_at: body.published ? new Date().toISOString() : null,
+        read_time: readTime,
+        seo_keywords: tags,
       }])
       .select()
       .single();
+
+    if (error && looksLikeMissingColumnError(error)) {
+      ({ data, error } = await client
+        .from('blog_posts')
+        .insert([{
+          slug: body.slug,
+          title: body.title,
+          content: body.content,
+          excerpt: body.excerpt || '',
+          category: body.category || 'RFID',
+          author: body.author || 'Admin',
+          featuredImage: body.featured_image || '',
+          tags,
+          isPublished: body.published || false,
+          readTime,
+          seoKeywords: tags,
+        }])
+        .select()
+        .single());
+    }
 
     if (error) {
       // Check if slug already exists
@@ -148,6 +192,8 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    revalidateTag('blog-posts', 'max');
 
     return NextResponse.json({
       success: true,

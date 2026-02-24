@@ -1,5 +1,7 @@
 # 博客表修复 - 类型问题已修复
 
+> 📦 归档说明：该文档是历史修复记录。实际部署请以 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md) 为准。
+
 ## ✅ 已修复类型不匹配问题
 
 所有类型错误已修复！

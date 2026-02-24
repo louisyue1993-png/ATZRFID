@@ -8,6 +8,11 @@ interface SupabaseCredentials {
   anonKey: string;
 }
 
+interface SupabaseAdminCredentials {
+  url: string;
+  serviceRoleKey: string;
+}
+
 function loadEnv(): void {
   if (envLoaded || (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY)) {
     return;
@@ -112,4 +117,34 @@ function getSupabaseClient(token?: string): SupabaseClient {
   });
 }
 
-export { loadEnv, getSupabaseCredentials, getSupabaseClient };
+function getSupabaseAdminCredentials(): SupabaseAdminCredentials {
+  loadEnv();
+
+  const url = process.env.COZE_SUPABASE_URL;
+  const serviceRoleKey = process.env.COZE_SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url) {
+    throw new Error('COZE_SUPABASE_URL is not set');
+  }
+  if (!serviceRoleKey) {
+    throw new Error('COZE_SUPABASE_SERVICE_ROLE_KEY is not set');
+  }
+
+  return { url, serviceRoleKey };
+}
+
+function getSupabaseAdminClient(): SupabaseClient {
+  const { url, serviceRoleKey } = getSupabaseAdminCredentials();
+
+  return createClient(url, serviceRoleKey, {
+    db: {
+      timeout: 60000,
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+export { loadEnv, getSupabaseCredentials, getSupabaseClient, getSupabaseAdminCredentials, getSupabaseAdminClient };

@@ -1,5 +1,7 @@
 # 博客数据初始化 - 紧急修复指南
 
+> 📦 归档说明：该文档仅供历史应急排障。请先执行 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## 🔴 当前问题
 
 Supabase 数据库中的 `blog_posts` 表缺少多个必需的列：

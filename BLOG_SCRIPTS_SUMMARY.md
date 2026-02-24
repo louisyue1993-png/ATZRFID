@@ -1,5 +1,7 @@
 # 博客表修复 - 所有脚本汇总
 
+> 📦 归档说明：此文档用于历史问题排查。常规部署请直接使用 [DEPLOYMENT_SUPABASE_VERCEL.md](./DEPLOYMENT_SUPABASE_VERCEL.md)。
+
 ## 📦 可用的修复脚本
 
 这里列出了所有可用的博客表修复脚本，从快速修复到彻底重建。
