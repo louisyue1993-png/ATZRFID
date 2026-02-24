@@ -58,7 +58,7 @@ function buildStaticProducts(id: string | null, category: string | null, subCate
 
 // GET /api/products - Get all products with optional filters
 export async function GET(request: NextRequest) {
-  const isDebugEnabled = process.env.NODE_ENV !== 'production';
+  let isDebugEnabled = false;
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');  // Support single product lookup by ID
@@ -66,6 +66,9 @@ export async function GET(request: NextRequest) {
     const subcategory = searchParams.get('subcategory');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const debugParam = searchParams.get('debug');
+
+    isDebugEnabled = process.env.NODE_ENV !== 'production' && debugParam === '1';
 
     console.log('[API Products] Received filters:', {
       id,

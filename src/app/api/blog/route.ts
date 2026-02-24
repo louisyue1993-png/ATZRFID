@@ -68,7 +68,7 @@ function blogDedupeKeys(post: Record<string, any>): string[] {
 
 // GET /api/blog - Get published blog posts
 export async function GET(request: NextRequest) {
-  const isDebugEnabled = process.env.NODE_ENV !== 'production';
+  let isDebugEnabled = false;
   try {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '12');
@@ -76,6 +76,9 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const slug = searchParams.get('slug');
     const includeContent = searchParams.get('includeContent') === 'true';
+    const debugParam = searchParams.get('debug');
+
+    isDebugEnabled = process.env.NODE_ENV !== 'production' && debugParam === '1';
 
     console.log('[Public Blog API] Fetching blogs with params:', {
       limit,
