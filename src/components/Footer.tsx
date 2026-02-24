@@ -1,11 +1,14 @@
+'use client';
+
 import Link from 'next/link';
-import { headers } from 'next/headers';
+import { usePathname } from 'next/navigation';
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { productCategories } from '@/data/productCategories';
-import { getLocaleTexts, getRequestLocale, withLocalePath } from '@/lib/i18n';
+import { defaultLocale, getLocaleFromPathname, getLocaleTexts, withLocalePath } from '@/lib/i18n';
 
-export default async function Footer() {
-  const locale = getRequestLocale((await headers()).get('x-locale'));
+export default function Footer() {
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname || '/') ?? defaultLocale;
   const t = getLocaleTexts(locale).nav;
   const toLocalizedPath = (href: string) => withLocalePath(href, locale);
 
