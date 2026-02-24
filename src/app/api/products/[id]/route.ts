@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { products as staticProducts } from '@/data/products';
 
 // Convert snake_case to camelCase and parse JSON fields
 function formatProduct(product: any): any {
@@ -84,15 +85,13 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
+    if (error || !product) {
+      const fallbackProduct = staticProducts.find(p => p.id === id);
+      if (fallbackProduct) {
+        return NextResponse.json({ product: fallbackProduct });
+      }
 
-    if (!product) {
+      console.error('Supabase error:', error);
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { normalizeCategory, normalizeSubCategory, subCategoryMapping } from '@/lib/categoryMapping';
+import { products as staticProducts } from '@/data/products';
 
 function formatPrice(value: unknown): string {
   if (value === null || value === undefined || value === '') {
@@ -158,10 +159,29 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    if (formattedProducts.length > 0) {
+      return NextResponse.json({
+        success: true,
+        products: formattedProducts,
+        count: formattedProducts.length,
+      });
+    }
+
+    const fallbackProducts = staticProducts
+      .filter(p => !id || p.id === id)
+      .filter(p => !normalizedCategory || p.category === normalizedCategory)
+      .filter(p => !normalizedSubCategory || p.subCategory === normalizedSubCategory)
+      .slice(offset, offset + limit)
+      .map(p => ({
+        ...p,
+        created_at: undefined,
+        updated_at: undefined,
+      }));
+
     return NextResponse.json({
       success: true,
-      products: formattedProducts,
-      count: formattedProducts.length,
+      products: fallbackProducts,
+      count: fallbackProducts.length,
     });
   } catch (error: any) {
     return NextResponse.json(

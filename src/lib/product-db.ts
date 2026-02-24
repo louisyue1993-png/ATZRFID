@@ -1,6 +1,6 @@
 // Database utility functions for server-side components
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import type { Product } from '@/data/products';
+import { products as staticProducts, type Product } from '@/data/products';
 
 // Format product data from database format to frontend format
 function formatProduct(product: any): Product {
@@ -85,13 +85,12 @@ export async function getProductByIdFromDB(id: string): Promise<Product | null> 
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return null;
-    }
-
-    if (!product) {
-      return null;
+    if (error || !product) {
+      if (error) {
+        console.error('Supabase error:', error);
+      }
+      const fallbackProduct = staticProducts.find(item => item.id === id);
+      return fallbackProduct || null;
     }
 
     return formatProduct(product);
@@ -115,13 +114,23 @@ export async function getRelatedProductsFromDB(category: string, excludeId: stri
 
     if (error) {
       console.error('Supabase error:', error);
-      return [];
+      return staticProducts
+        .filter(item => item.category === category && item.id !== excludeId)
+        .slice(0, limit);
     }
 
     const formattedProducts = (products || []).map(formatProduct);
-    return formattedProducts.slice(0, limit);
+    if (formattedProducts.length > 0) {
+      return formattedProducts.slice(0, limit);
+    }
+
+    return staticProducts
+      .filter(item => item.category === category && item.id !== excludeId)
+      .slice(0, limit);
   } catch (error) {
     console.error('Error fetching related products from database:', error);
-    return [];
+    return staticProducts
+      .filter(item => item.category === category && item.id !== excludeId)
+      .slice(0, limit);
   }
 }

@@ -1,6 +1,7 @@
 // Public Blog API - Fetch blog posts for the website
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
+import { blogPosts as staticBlogPosts } from '@/lib/blog-data';
 
 function parseJsonArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -102,10 +103,40 @@ export async function GET(request: NextRequest) {
         updatedAt: post.updated_at || post.updatedAt || post.created_at || new Date().toISOString(),
       }));
 
+    if (transformedPosts.length > 0) {
+      return NextResponse.json({
+        success: true,
+        posts: transformedPosts,
+        count: transformedPosts.length,
+      });
+    }
+
+    const fallbackPosts = staticBlogPosts
+      .filter(post => post.published)
+      .filter(post => !slug || post.slug === slug)
+      .filter(post => !category || String(post.category || '').toLowerCase() === category.toLowerCase())
+      .slice(offset, offset + limit)
+      .map(post => ({
+        id: String(post.id),
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt || '',
+        ...(includeContent ? { content: post.content || '' } : {}),
+        category: post.category || 'RFID',
+        author: post.author || 'ATZ Team',
+        readTime: post.readTime || '5 min read',
+        image: post.image || '/blog/default-blog.jpg',
+        published: post.published,
+        tags: Array.isArray(post.tags) ? post.tags : [],
+        seoKeywords: Array.isArray(post.seoKeywords) ? post.seoKeywords : [],
+        createdAt: new Date(post.date).toISOString(),
+        updatedAt: new Date(post.date).toISOString(),
+      }));
+
     return NextResponse.json({
       success: true,
-      posts: transformedPosts,
-      count: transformedPosts.length,
+      posts: fallbackPosts,
+      count: fallbackPosts.length,
     });
   } catch (error: any) {
     console.error('[Public Blog API] Error:', error);

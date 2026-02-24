@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import { getSupabaseAdminClient } from '@/storage/database/supabase-client';
+import { blogPosts as staticBlogPosts } from '@/lib/blog-data';
 
 export const revalidate = 300;
 
@@ -92,8 +93,29 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
   }
 
   if (error || !data) {
-    console.error('Error fetching blog post:', error);
-    return null;
+    if (error) {
+      console.error('Error fetching blog post:', error);
+    }
+
+    const fallbackPost = staticBlogPosts.find(post => post.slug === slug && post.published);
+    if (!fallbackPost) {
+      return null;
+    }
+
+    return {
+      id: String(fallbackPost.id),
+      slug: fallbackPost.slug,
+      title: fallbackPost.title,
+      excerpt: fallbackPost.excerpt || '',
+      category: fallbackPost.category || 'RFID',
+      date: fallbackPost.date,
+      readTime: fallbackPost.readTime || '5 min read',
+      author: fallbackPost.author || 'ATZ Team',
+      authorRole: 'RFID Specialist',
+      authorBio: 'Focuses on RFID technology insights and real-world implementation best practices.',
+      tags: Array.isArray(fallbackPost.tags) ? fallbackPost.tags : [],
+      content: parseContent(fallbackPost.content),
+    };
   }
 
   return {
@@ -143,8 +165,21 @@ async function getRelatedPosts(currentId: string): Promise<RelatedPost[]> {
   }
 
   if (error || !data) {
-    console.error('Error fetching related posts:', error);
-    return [];
+    if (error) {
+      console.error('Error fetching related posts:', error);
+    }
+
+    return staticBlogPosts
+      .filter(post => post.published)
+      .filter(post => String(post.id) !== currentId)
+      .slice(0, 3)
+      .map(post => ({
+        id: String(post.id),
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        category: post.category,
+      }));
   }
 
   return data;
