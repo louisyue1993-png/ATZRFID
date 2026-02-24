@@ -71,7 +71,7 @@ export default function ProductsPageClient({
       try {
         setIsLoading(true);
         console.log('[ProductsPageClient] Fetching products from API...');
-        const response = await fetch('/api/products?limit=100');
+        const response = await fetch('/api/products?limit=1000');
         const data = await response.json();
         
         console.log('[ProductsPageClient] API response:', {

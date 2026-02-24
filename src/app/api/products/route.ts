@@ -16,6 +16,18 @@ function formatPrice(value: unknown): string {
   return text.startsWith('$') ? text : `$${text}`;
 }
 
+function buildStaticProducts(id: string | null, category: string | null, subCategory: string | null) {
+  return staticProducts
+    .filter(p => !id || p.id === id)
+    .filter(p => !category || p.category === category)
+    .filter(p => !subCategory || p.subCategory === subCategory)
+    .map(p => ({
+      ...p,
+      created_at: undefined,
+      updated_at: undefined,
+    }));
+}
+
 // GET /api/products - Get all products with optional filters
 export async function GET(request: NextRequest) {
   try {
@@ -73,12 +85,14 @@ export async function GET(request: NextRequest) {
       query = query.eq('sub_category', normalizedSubCategory);
     }
 
-    const { data: products, error } = await query.range(offset, offset + limit - 1);
+    const { data: products, error } = await query.range(0, 1999);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[API Products] Database query failed, fallback to static products:', error.message);
+    }
 
     // Transform database format to frontend format
-    const formattedProducts = products.map(p => {
+    const formattedProducts = (products || []).map(p => {
       // Parse JSON fields
       let specifications = {};
       let features = [];
@@ -159,34 +173,44 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    if (formattedProducts.length > 0) {
-      return NextResponse.json({
-        success: true,
-        products: formattedProducts,
-        count: formattedProducts.length,
-      });
+    const fallbackProducts = buildStaticProducts(id, normalizedCategory, normalizedSubCategory);
+
+    const seenKeys = new Set(
+      formattedProducts.map(item => `${String(item.id)}::${String(item.name).toLowerCase()}`)
+    );
+
+    const mergedProducts: Array<Record<string, any>> = [...formattedProducts];
+    for (const item of fallbackProducts) {
+      const key = `${String(item.id)}::${String(item.name).toLowerCase()}`;
+      if (!seenKeys.has(key)) {
+        mergedProducts.push(item);
+      }
     }
 
-    const fallbackProducts = staticProducts
-      .filter(p => !id || p.id === id)
-      .filter(p => !normalizedCategory || p.category === normalizedCategory)
-      .filter(p => !normalizedSubCategory || p.subCategory === normalizedSubCategory)
-      .slice(offset, offset + limit)
-      .map(p => ({
-        ...p,
-        created_at: undefined,
-        updated_at: undefined,
-      }));
+    const pagedProducts = mergedProducts.slice(offset, offset + limit);
+
+    return NextResponse.json({
+      success: true,
+      products: pagedProducts,
+      count: pagedProducts.length,
+    });
+  } catch (error: any) {
+    console.error('[API Products] Unexpected error, fallback to static products:', error);
+
+    const searchParams = request.nextUrl.searchParams;
+    const id = searchParams.get('id');
+    const category = normalizeCategory(searchParams.get('category'));
+    const subCategory = normalizeSubCategory(searchParams.get('subcategory'));
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    const fallbackProducts = buildStaticProducts(id, category, subCategory).slice(offset, offset + limit);
 
     return NextResponse.json({
       success: true,
       products: fallbackProducts,
       count: fallbackProducts.length,
+      fallback: true,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch products' },
-      { status: 500 }
-    );
   }
 }

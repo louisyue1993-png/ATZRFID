@@ -72,12 +72,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('category', category);
     }
 
-    // Apply pagination
-    const { data, error } = await query.range(offset, offset + limit - 1);
+    // Fetch a larger window and apply pagination after merge with static data
+    const { data, error } = await query.range(0, 499);
 
     if (error) {
       console.error('[Public Blog API] Database error:', error);
-      throw error;
     }
 
     console.log('[Public Blog API] Fetched blogs:', data?.length || 0);
@@ -103,19 +102,10 @@ export async function GET(request: NextRequest) {
         updatedAt: post.updated_at || post.updatedAt || post.created_at || new Date().toISOString(),
       }));
 
-    if (transformedPosts.length > 0) {
-      return NextResponse.json({
-        success: true,
-        posts: transformedPosts,
-        count: transformedPosts.length,
-      });
-    }
-
     const fallbackPosts = staticBlogPosts
       .filter(post => post.published)
       .filter(post => !slug || post.slug === slug)
       .filter(post => !category || String(post.category || '').toLowerCase() === category.toLowerCase())
-      .slice(offset, offset + limit)
       .map(post => ({
         id: String(post.id),
         slug: post.slug,
@@ -133,10 +123,21 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(post.date).toISOString(),
       }));
 
+    const seenSlugs = new Set(transformedPosts.map(post => post.slug));
+    const mergedPosts = [...transformedPosts];
+
+    for (const post of fallbackPosts) {
+      if (!seenSlugs.has(post.slug)) {
+        mergedPosts.push(post);
+      }
+    }
+
+    const pagedPosts = mergedPosts.slice(offset, offset + limit);
+
     return NextResponse.json({
       success: true,
-      posts: fallbackPosts,
-      count: fallbackPosts.length,
+      posts: pagedPosts,
+      count: pagedPosts.length,
     });
   } catch (error: any) {
     console.error('[Public Blog API] Error:', error);
