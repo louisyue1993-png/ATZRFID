@@ -139,6 +139,35 @@ function parseContent(value: unknown): Array<{ heading?: string; paragraphs?: st
   return [];
 }
 
+function isActionableSupabaseError(error: any): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const normalizeText = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    return value.replace(/\s+/g, ' ').trim();
+  };
+
+  const code = normalizeText(error.code);
+  const message = normalizeText(error.message);
+  const details = normalizeText(error.details);
+  const hint = normalizeText(error.hint);
+
+  const isNoRowsError = code === 'PGRST116' || /no rows returned|json object requested, multiple \(or no\) rows returned/i.test(message);
+  if (isNoRowsError) {
+    return false;
+  }
+
+  const meaninglessValues = new Set(['{}', '[]', 'null', 'undefined']);
+  const hasMeaningfulCode = Boolean(code) && !meaninglessValues.has(code.toLowerCase());
+  const hasMeaningfulMessage = Boolean(message) && !meaninglessValues.has(message.toLowerCase());
+  const hasMeaningfulDetails = Boolean(details) && !meaninglessValues.has(details.toLowerCase());
+  const hasMeaningfulHint = Boolean(hint) && !meaninglessValues.has(hint.toLowerCase());
+
+  return hasMeaningfulCode || hasMeaningfulMessage || hasMeaningfulDetails || hasMeaningfulHint;
+}
+
 async function getBlogPost(slug: string): Promise<BlogPost | null> {
   const supabase = getSupabaseAdminClient();
 
@@ -150,7 +179,7 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
     .select('id, slug, title, excerpt, content, category, created_at, read_time, author, tags, published')
     .eq('slug', slug)
     .eq('published', true)
-    .single();
+    .maybeSingle();
 
   data = primary.data as any;
   error = primary.error;
@@ -161,14 +190,14 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
       .select('id, slug, title, excerpt, content, category, created_at, readTime, author, tags, isPublished')
       .eq('slug', slug)
       .eq('isPublished', true)
-      .single();
+      .maybeSingle();
 
     data = fallback.data as any;
     error = fallback.error;
   }
 
   if (error || !data) {
-    if (error) {
+    if (isActionableSupabaseError(error)) {
       console.error('Error fetching blog post:', error);
     }
 
@@ -240,10 +269,6 @@ async function getRelatedPosts(currentId: string): Promise<RelatedPost[]> {
   }
 
   if (error || !data) {
-    if (error) {
-      console.error('Error fetching related posts:', error);
-    }
-
     return staticBlogPosts
       .filter(post => post.published)
       .filter(post => String(post.id) !== currentId)

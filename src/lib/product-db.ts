@@ -83,12 +83,9 @@ export async function getProductByIdFromDB(id: string): Promise<Product | null> 
       .from('products')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error || !product) {
-      if (error) {
-        console.error('Supabase error:', error);
-      }
       const fallbackProduct = staticProducts.find(item => item.id === id);
       return fallbackProduct || null;
     }
@@ -113,7 +110,6 @@ export async function getRelatedProductsFromDB(category: string, excludeId: stri
       .limit(limit + 10); // Get more to filter
 
     if (error) {
-      console.error('Supabase error:', error);
       return staticProducts
         .filter(item => item.category === category && item.id !== excludeId)
         .slice(0, limit);

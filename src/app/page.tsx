@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { productCategories } from '@/data/productCategories';
 import { fetchProducts } from '@/lib/product-api';
 
-function LocalBusinessJsonLd({ products = [] }: { products: any[] }) {
+function LocalBusinessJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -54,21 +54,24 @@ function LocalBusinessJsonLd({ products = [] }: { products: any[] }) {
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
       name: 'RFID Products',
-      itemListElement: products.slice(0, 10).map(product => ({
+      itemListElement: productCategories.slice(0, 10).map(category => ({
         '@type': 'Offer',
         itemOffered: {
           '@type': 'Product',
-          name: product.name,
-          description: product.shortDescription,
+          name: category.name,
+          description: `${category.name} RFID solutions`,
         },
       })),
     },
   };
 
+  const serialized = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: serialized }}
     />
   );
 }
@@ -80,7 +83,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LocalBusinessJsonLd products={products} />
+      <LocalBusinessJsonLd />
 
       <main className="flex-1">
         {/* Hero Section - Premium Dark Gradient */}
