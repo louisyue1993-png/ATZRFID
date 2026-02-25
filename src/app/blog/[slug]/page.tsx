@@ -41,6 +41,76 @@ function parseTags(value: unknown): string[] {
   return [];
 }
 
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : '';
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : '';
+    });
+}
+
+function stripHtmlTags(input: string): string {
+  return input.replace(/<[^>]*>/g, '');
+}
+
+function normalizeText(input: string): string {
+  return decodeHtmlEntities(stripHtmlTags(input)).replace(/\s+/g, ' ').trim();
+}
+
+function parseHtmlContent(value: string): Array<{ heading?: string; paragraphs?: string[]; list?: string[] }> {
+  if (!/<\/?(h2|h3|p|ul|ol|li)\b/i.test(value)) {
+    return [];
+  }
+
+  const sections: Array<{ heading?: string; paragraphs?: string[]; list?: string[] }> = [];
+  let current: { heading?: string; paragraphs?: string[]; list?: string[] } = { paragraphs: [] };
+
+  const pushCurrentIfHasContent = () => {
+    if (current.heading || current.paragraphs?.length || current.list?.length) {
+      sections.push(current);
+    }
+  };
+
+  const content = value.replace(/<br\s*\/?\s*>/gi, '\n');
+  const tokenRegex = /<(h2|h3|p|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+
+  for (const match of content.matchAll(tokenRegex)) {
+    const tag = (match[1] || '').toLowerCase();
+    const text = normalizeText(match[2] || '');
+    if (!text) continue;
+
+    if (tag === 'h2' || tag === 'h3') {
+      pushCurrentIfHasContent();
+      current = { heading: text, paragraphs: [] };
+      continue;
+    }
+
+    if (tag === 'p') {
+      current.paragraphs = current.paragraphs || [];
+      current.paragraphs.push(text);
+      continue;
+    }
+
+    if (tag === 'li') {
+      current.list = current.list || [];
+      current.list.push(text);
+    }
+  }
+
+  pushCurrentIfHasContent();
+  return sections;
+}
+
 function parseContent(value: unknown): Array<{ heading?: string; paragraphs?: string[]; list?: string[] }> {
   if (Array.isArray(value)) {
     return value as Array<{ heading?: string; paragraphs?: string[]; list?: string[] }>;
@@ -53,8 +123,13 @@ function parseContent(value: unknown): Array<{ heading?: string; paragraphs?: st
         return parsed as Array<{ heading?: string; paragraphs?: string[]; list?: string[] }>;
       }
     } catch {
+      const htmlSections = parseHtmlContent(value);
+      if (htmlSections.length > 0) {
+        return htmlSections;
+      }
+
       const paragraphs = value
-        .split('\n\n')
+        .split(/\n{2,}/)
         .map(item => item.trim())
         .filter(Boolean);
       return [{ paragraphs }];

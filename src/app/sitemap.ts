@@ -2,13 +2,14 @@ import { MetadataRoute } from 'next';
 import { products } from '@/data/products';
 import { productCategories } from '@/data/productCategories';
 import { supportedLocales, withLocalePath } from '@/lib/i18n';
+import { getSiteUrl } from '@/lib/site-url';
 
 function withAllLocales(baseUrl: string, path: string) {
   return supportedLocales.map(locale => `${baseUrl}${withLocalePath(path, locale)}`);
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.atzrfid.com';
+  const baseUrl = getSiteUrl();
 
   // Static pages
   const staticPaths = ['/', '/about', '/contact', '/products', '/blog', '/privacy', '/terms', '/shipping'];

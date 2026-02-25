@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ interface BlogPost {
 }
 
 const categories = ['RFID', 'UHF Tags', 'HF/NFC', 'Wristbands', 'Cards', 'Industry News', 'Tutorials', 'Case Studies'];
+const recommendedContentTags = new Set(['h2', 'h3', 'p', 'li']);
 
 export default function AdminBlogEditPage() {
   const router = useRouter();
@@ -69,6 +70,23 @@ export default function AdminBlogEditPage() {
   });
 
   const [newTag, setNewTag] = useState('');
+
+  const nonRecommendedTags = useMemo(() => {
+    if (!formData.content) return [] as string[];
+
+    const foundTags = new Set<string>();
+    const tagPattern = /<\/?([a-z0-9]+)\b[^>]*>/gi;
+    let match: RegExpExecArray | null = null;
+
+    while ((match = tagPattern.exec(formData.content)) !== null) {
+      const tag = (match[1] || '').toLowerCase();
+      if (tag) {
+        foundTags.add(tag);
+      }
+    }
+
+    return Array.from(foundTags).filter(tag => !recommendedContentTags.has(tag));
+  }, [formData.content]);
 
   useEffect(() => {
     if (!isNew) {
@@ -138,6 +156,11 @@ export default function AdminBlogEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (nonRecommendedTags.length > 0) {
+      alert(`Format warning: detected non-recommended tags: ${nonRecommendedTags.map(tag => `<${tag}>`).join(', ')}. Recommended tags are <h2>, <h3>, <p>, <li>. Saving will continue.`);
+    }
+
     setIsSaving(true);
 
     try {
@@ -346,14 +369,24 @@ export default function AdminBlogEditPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="content">Content *</Label>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 space-y-2">
+                    <p className="font-medium text-slate-900">Recommended format (HTML):</p>
+                    <p>Use only <span className="font-mono">&lt;h2&gt;</span>, <span className="font-mono">&lt;h3&gt;</span>, <span className="font-mono">&lt;p&gt;</span>, and <span className="font-mono">&lt;li&gt;</span> to keep frontend rendering consistent.</p>
+                    <p className="text-slate-600">Example: &lt;h2&gt;Section Title&lt;/h2&gt; &lt;p&gt;Paragraph text...&lt;/p&gt; &lt;h3&gt;Subsection&lt;/h3&gt; &lt;p&gt;More text...&lt;/p&gt;</p>
+                  </div>
                   <Textarea
                     id="content"
                     value={formData.content}
                     onChange={(e) => handleInputChange('content', e.target.value)}
                     rows={15}
-                    placeholder="Write your blog post content here..."
+                    placeholder="<h2>Section Title</h2>\n<p>Paragraph text...</p>\n<h3>Subsection</h3>\n<p>More details...</p>"
                     required
                   />
+                  {nonRecommendedTags.length > 0 && (
+                    <p className="text-sm text-amber-700">
+                      Format warning: detected non-recommended tags {nonRecommendedTags.map(tag => `<${tag}>`).join(', ')}. Recommended tags are &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;li&gt;. You can still save.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
